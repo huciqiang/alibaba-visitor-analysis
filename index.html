@@ -154,6 +154,14 @@ tbody td { padding: 10px 14px; color: var(--text); }
 .mini-fill  { height: 100%; border-radius: 99px; }
 .mini-val   { font-size: 12px; font-weight: 700; min-width: 42px; text-align: right; }
 
+/* 排序表头 */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { background: rgba(46,134,171,.08); }
+th.sortable .sort-icon { display: inline-block; margin-left: 4px; opacity: .35; font-size: 11px; transition: opacity .15s; }
+th.sortable.asc  .sort-icon::after { content: ' ▲'; opacity: 1; }
+th.sortable.desc .sort-icon::after { content: ' ▼'; opacity: 1; }
+th.sortable:not(.asc):not(.desc) .sort-icon::after { content: ' ⇅'; }
+
 /* 潜力标签 */
 .badge {
   display: inline-block; padding: 2px 8px; border-radius: 99px;
@@ -250,10 +258,10 @@ tbody td { padding: 10px 14px; color: var(--text); }
             <tr>
               <th style="width:36px">#</th>
               <th>国家 / 地区</th>
-              <th>访客数</th>
-              <th>询盘</th>
-              <th>TM</th>
-              <th>综合转化率</th>
+              <th class="sortable" id="cth-visitors" onclick="sortCountry('visitors')">访客数<span class="sort-icon"></span></th>
+              <th class="sortable" id="cth-inq"      onclick="sortCountry('inq')">询盘<span class="sort-icon"></span></th>
+              <th class="sortable" id="cth-tm"       onclick="sortCountry('tm')">TM<span class="sort-icon"></span></th>
+              <th class="sortable desc" id="cth-convRate" onclick="sortCountry('convRate')">综合转化率<span class="sort-icon"></span></th>
             </tr>
           </thead>
           <tbody id="countryBody"></tbody>
@@ -272,10 +280,10 @@ tbody td { padding: 10px 14px; color: var(--text); }
             <tr>
               <th style="width:36px">#</th>
               <th>关键词</th>
-              <th>访客量</th>
-              <th>询盘</th>
-              <th>TM</th>
-              <th>询盘转化</th>
+              <th class="sortable desc" id="kth-visitors" onclick="sortKw('visitors')">访客量<span class="sort-icon"></span></th>
+              <th class="sortable" id="kth-inq"     onclick="sortKw('inq')">询盘<span class="sort-icon"></span></th>
+              <th class="sortable" id="kth-tm"      onclick="sortKw('tm')">TM<span class="sort-icon"></span></th>
+              <th class="sortable" id="kth-inqRate" onclick="sortKw('inqRate')">询盘转化<span class="sort-icon"></span></th>
               <th>潜力</th>
             </tr>
           </thead>
@@ -479,6 +487,9 @@ function analyze(rows) {
 // ══════════════════════════════════════════════════════════
 const PAGE_SIZE = 15;
 let countryPage = 1, kwPage = 1;
+// 排序状态
+let countrySortKey = 'convRate', countrySortDir = -1; // -1=降序
+let kwSortKey = 'visitors', kwSortDir = -1;
 
 function render(result) {
   _result = result;
@@ -502,9 +513,24 @@ function render(result) {
   renderKwPage();
 }
 
+function sortCountry(key) {
+  if (countrySortKey === key) { countrySortDir *= -1; }
+  else { countrySortKey = key; countrySortDir = -1; }
+  countryPage = 1;
+  // 更新表头样式
+  ['visitors','inq','tm','convRate'].forEach(k => {
+    const el = $('cth-' + k);
+    if (!el) return;
+    el.className = 'sortable' + (k === countrySortKey ? (countrySortDir === -1 ? ' desc' : ' asc') : '');
+  });
+  renderCountryPage();
+}
+
 function renderCountryPage() {
-  const data = _result.countries;
-  const maxConv = data[0]?.convRate || 1;
+  const data = [..._result.countries].sort((a, b) =>
+    countrySortDir * (b[countrySortKey] - a[countrySortKey])
+  );
+  const maxConv = Math.max(...data.map(d => d.convRate)) || 1;
   const total = data.length;
   const pages = Math.ceil(total / PAGE_SIZE);
   const slice = data.slice((countryPage - 1) * PAGE_SIZE, countryPage * PAGE_SIZE);
@@ -533,9 +559,23 @@ function renderCountryPage() {
   renderPager('countryPager', pages, countryPage, p => { countryPage = p; renderCountryPage(); });
 }
 
+function sortKw(key) {
+  if (kwSortKey === key) { kwSortDir *= -1; }
+  else { kwSortKey = key; kwSortDir = -1; }
+  kwPage = 1;
+  ['visitors','inq','tm','inqRate'].forEach(k => {
+    const el = $('kth-' + k);
+    if (!el) return;
+    el.className = 'sortable' + (k === kwSortKey ? (kwSortDir === -1 ? ' desc' : ' asc') : '');
+  });
+  renderKwPage();
+}
+
 function renderKwPage() {
-  const data = _result.keywords;
-  const maxV = data[0]?.visitors || 1;
+  const data = [..._result.keywords].sort((a, b) =>
+    kwSortDir * (b[kwSortKey] - a[kwSortKey])
+  );
+  const maxV = Math.max(...data.map(d => d.visitors)) || 1;
   const total = data.length;
   const pages = Math.ceil(total / PAGE_SIZE);
   const slice = data.slice((kwPage - 1) * PAGE_SIZE, kwPage * PAGE_SIZE);
