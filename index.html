@@ -304,15 +304,18 @@ const $ = id => document.getElementById(id);
 
 function findField(headers, candidates) {
   const lower = headers.map(h => ({ orig: h, low: h.toLowerCase().replace(/[\s_\-]/g, '') }));
-  // 先精确匹配，再子串匹配（避免 country 误匹配 buyerCountryImg）
+  // 第一轮：精确匹配（完整字段名一致）
   for (const c of candidates) {
     const cl = c.toLowerCase().replace(/[\s_\-]/g, '');
     const found = lower.find(h => h.low === cl);
     if (found) return found.orig;
   }
-  for (const c of candidates) {
+  // 第二轮：子串匹配，但候选词按长度降序，长词优先避免误匹配
+  // 例如 buyerCountry(12) 比 country(7) 先匹配，不会误命中 buyerCountryImg
+  const sorted = [...candidates].sort((a, b) => b.length - a.length);
+  for (const c of sorted) {
     const cl = c.toLowerCase().replace(/[\s_\-]/g, '');
-    const found = lower.find(h => h.low.endsWith(cl));
+    const found = lower.find(h => h.low.includes(cl) && h.low.length <= cl.length + 6);
     if (found) return found.orig;
   }
   return null;
@@ -399,7 +402,7 @@ function analyze(rows) {
   const headers = Object.keys(rows[0]);
 
   const F = {
-    country:    findField(headers, ['buyerCountry','国家','location','buyerLocation']),  // 不含 'country' 避免子串误匹配
+    country:    findField(headers, ['buyerCountry','国家','country','buyerLocation','location']),
     countryImg: findField(headers, ['buyerCountryImg','countryImg','flagImg']),
     countryId:  findField(headers, ['buyerCountryId','countryId','countryCode']),
     kw1:        findField(headers, ['进店词语','serKeywords','keywords','keyword']),
