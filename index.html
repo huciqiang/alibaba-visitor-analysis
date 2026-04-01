@@ -304,9 +304,15 @@ const $ = id => document.getElementById(id);
 
 function findField(headers, candidates) {
   const lower = headers.map(h => ({ orig: h, low: h.toLowerCase().replace(/[\s_\-]/g, '') }));
+  // 先精确匹配，再子串匹配（避免 country 误匹配 buyerCountryImg）
   for (const c of candidates) {
     const cl = c.toLowerCase().replace(/[\s_\-]/g, '');
-    const found = lower.find(h => h.low.includes(cl));
+    const found = lower.find(h => h.low === cl);
+    if (found) return found.orig;
+  }
+  for (const c of candidates) {
+    const cl = c.toLowerCase().replace(/[\s_\-]/g, '');
+    const found = lower.find(h => h.low.endsWith(cl));
     if (found) return found.orig;
   }
   return null;
@@ -393,7 +399,7 @@ function analyze(rows) {
   const headers = Object.keys(rows[0]);
 
   const F = {
-    country:    findField(headers, ['buyerCountry','国家','country','buyerLocation','location']),
+    country:    findField(headers, ['buyerCountry','国家','location','buyerLocation']),  // 不含 'country' 避免子串误匹配
     countryImg: findField(headers, ['buyerCountryImg','countryImg','flagImg']),
     countryId:  findField(headers, ['buyerCountryId','countryId','countryCode']),
     kw1:        findField(headers, ['进店词语','serKeywords','keywords','keyword']),
