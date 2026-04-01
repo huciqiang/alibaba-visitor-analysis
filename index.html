@@ -373,13 +373,16 @@ function analyze(rows) {
   const headers = Object.keys(rows[0]);
 
   const F = {
-    country:   findField(headers, ['buyerCountry','country','国家','buyerLocation','location']),
-    countryImg:findField(headers, ['buyerCountryImg','countryImg','flagImg']),
-    kw1:       findField(headers, ['serKeywords','keywords','keyword']),
-    kw2:       findField(headers, ['searchKeyword','search_keyword','搜索词']),
-    inquiry:   findField(headers, ['isMcFb','inquiry','询盘','mcfb','totalMcFbCnt','isInquiry']),
-    tm:        findField(headers, ['isAtmFb','atm','TM','atmfb','totalAtmFbCnt','isTm']),
-    stay:      findField(headers, ['staySecond','stayTime','停留','duration','visitDuration']),
+    country:    findField(headers, ['buyerCountry','country','国家','buyerLocation','location']),
+    countryImg: findField(headers, ['buyerCountryImg','countryImg','flagImg']),
+    countryId:  findField(headers, ['buyerCountryId','countryId','countryCode']),
+    kw1:        findField(headers, ['serKeywords','keywords','keyword']),
+    kw2:        findField(headers, ['searchKeyword','search_keyword','搜索词']),
+    // 优先用totalMcFbCnt（累计询盘数），其次isMcFb（0/1标志）
+    inquiry:    findField(headers, ['totalMcFbCnt','isMcFb','inquiry','询盘','mcfb','isInquiry']),
+    // 优先用totalAtmFbCnt（累计TM数），其次isAtmFb
+    tm:         findField(headers, ['totalAtmFbCnt','isAtmFb','atm','TM','atmfb','isTm']),
+    stay:       findField(headers, ['staySecond','stayTime','停留','duration','visitDuration']),
   };
 
   // 国家维度
@@ -391,8 +394,8 @@ function analyze(rows) {
   let totalInq = 0, totalTM = 0;
 
   for (const row of rows) {
-    const country = (F.country ? String(row[F.country] || '').trim() : '') || '未知';
-    const flagImg  = F.countryImg ? String(row[F.countryImg] || '') : '';
+    const country   = (F.country   ? String(row[F.country]   || '').trim() : '') || '未知';
+    const countryId = (F.countryId ? String(row[F.countryId] || '').trim() : '');
     const inq = F.inquiry ? (parseInt(row[F.inquiry]) > 0 ? 1 : 0) : 0;
     const tm  = F.tm      ? (parseInt(row[F.tm])      > 0 ? 1 : 0) : 0;
 
@@ -400,7 +403,7 @@ function analyze(rows) {
     totalTM  += tm;
 
     // 国家聚合
-    if (!countryMap[country]) countryMap[country] = { visitors: 0, inq: 0, tm: 0, flag: flagImg };
+    if (!countryMap[country]) countryMap[country] = { visitors: 0, inq: 0, tm: 0, countryId };
     countryMap[country].visitors++;
     countryMap[country].inq += inq;
     countryMap[country].tm  += tm;
@@ -423,7 +426,7 @@ function analyze(rows) {
   const countries = Object.entries(countryMap)
     .map(([name, d]) => ({
       name,
-      flag: d.flag,
+      countryId: d.countryId,
       visitors: d.visitors,
       inq: d.inq,
       tm:  d.tm,
@@ -487,10 +490,7 @@ function renderCountryPage() {
     const gIdx = (countryPage - 1) * PAGE_SIZE + i;
     const barW = maxConv > 0 ? Math.round(r.convRate / maxConv * 100) : 0;
     const barColor = r.convRate >= 5 ? '#22C55E' : r.convRate >= 1 ? '#F59E0B' : '#CBD5E1';
-    const flagSrc = r.flag ? `https://img.alicdn.com/tfs/TB1${r.flag}.png` : '';
-    const flagHtml = flagSrc
-      ? `<img class="flag" src="${flagSrc}" onerror="this.style.display='none'" />`
-      : `<span style="font-size:16px">${countryFlagEmoji(r.name)}</span>`;
+    const flagHtml = `<span style="font-size:18px;line-height:1">${countryFlagEmoji(r.name, r.countryId)}</span>`;
     return `<tr>
       <td><span class="${rankClass(gIdx)}">${gIdx + 1}</span></td>
       <td><div class="flag-wrap">${flagHtml}<span>${r.name}</span></div></td>
@@ -555,8 +555,19 @@ function renderPager(containerId, total, current, onChange) {
   el.innerHTML = html;
 }
 
-// ── 国旗 Emoji 降级 ───────────────────────────────────────
-function countryFlagEmoji(name) {
+// ── 国旗 Emoji：优先用 ISO 国家代码转 emoji，降级用名称 map ──
+function countryFlagEmoji(name, countryId) {
+  // ISO 2字母代码 → emoji（A=0x1F1E6, 区域指示符）
+  if (countryId && countryId.length === 2) {
+    const code = countryId.toUpperCase();
+    try {
+      return String.fromCodePoint(
+        0x1F1E6 + code.charCodeAt(0) - 65,
+        0x1F1E6 + code.charCodeAt(1) - 65
+      );
+    } catch(e) {}
+  }
+  // 降级：名称 map
   const map = {
     'United States':'🇺🇸','China':'🇨🇳','India':'🇮🇳','United Kingdom':'🇬🇧',
     'Germany':'🇩🇪','France':'🇫🇷','Brazil':'🇧🇷','Canada':'🇨🇦',
