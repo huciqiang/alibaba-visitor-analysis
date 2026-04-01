@@ -373,16 +373,15 @@ function analyze(rows) {
   const headers = Object.keys(rows[0]);
 
   const F = {
-    country:    findField(headers, ['buyerCountry','country','国家','buyerLocation','location']),
+    country:    findField(headers, ['buyerCountry','国家','country','buyerLocation','location']),
     countryImg: findField(headers, ['buyerCountryImg','countryImg','flagImg']),
     countryId:  findField(headers, ['buyerCountryId','countryId','countryCode']),
-    kw1:        findField(headers, ['serKeywords','keywords','keyword']),
-    kw2:        findField(headers, ['searchKeyword','search_keyword','搜索词']),
-    // 优先用totalMcFbCnt（累计询盘数），其次isMcFb（0/1标志）
-    inquiry:    findField(headers, ['totalMcFbCnt','isMcFb','inquiry','询盘','mcfb','isInquiry']),
-    // 优先用totalAtmFbCnt（累计TM数），其次isAtmFb
-    tm:         findField(headers, ['totalAtmFbCnt','isAtmFb','atm','TM','atmfb','isTm']),
-    stay:       findField(headers, ['staySecond','stayTime','停留','duration','visitDuration']),
+    kw1:        findField(headers, ['进店词语','serKeywords','keywords','keyword']),
+    kw2:        findField(headers, ['偏好词语','searchKeyword','search_keyword','搜索词']),
+    // 中文格式：询盘行为（字符串非空即有）；英文格式：totalMcFbCnt（数字）
+    inquiry:    findField(headers, ['询盘行为','totalMcFbCnt','isMcFb','inquiry','mcfb','isInquiry']),
+    tm:         findField(headers, ['TM行为','totalAtmFbCnt','isAtmFb','atm','atmfb','isTm']),
+    stay:       findField(headers, ['停留时长s','staySecond','停留','stayTime','duration','visitDuration']),
   };
 
   // 国家维度
@@ -393,11 +392,21 @@ function analyze(rows) {
   let totalVisitors = rows.length;
   let totalInq = 0, totalTM = 0;
 
+  // 判断字段值是否代表有行为（兼容字符串和数字）
+  function hasAction(val) {
+    if (val === null || val === undefined || val === '') return false;
+    const s = String(val).trim();
+    if (s === '' || s === '0') return false;
+    const n = parseFloat(s);
+    if (!isNaN(n)) return n > 0;
+    return s.length > 0;
+  }
+
   for (const row of rows) {
     const country   = (F.country   ? String(row[F.country]   || '').trim() : '') || '未知';
     const countryId = (F.countryId ? String(row[F.countryId] || '').trim() : '');
-    const inq = F.inquiry ? (parseInt(row[F.inquiry]) > 0 ? 1 : 0) : 0;
-    const tm  = F.tm      ? (parseInt(row[F.tm])      > 0 ? 1 : 0) : 0;
+    const inq = F.inquiry ? (hasAction(row[F.inquiry]) ? 1 : 0) : 0;
+    const tm  = F.tm      ? (hasAction(row[F.tm])      ? 1 : 0) : 0;
 
     totalInq += inq;
     totalTM  += tm;
