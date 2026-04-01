@@ -297,6 +297,9 @@ th.sortable:not(.asc):not(.desc) .sort-icon::after { content: ' ⇅'; }
 </main>
 
 <script>
+window.onerror = function(msg, src, line, col, err) {
+  alert('脚本错误：' + msg + '\n行：' + line + '\n' + (err ? err.stack||'' : '').slice(0,300));
+};
 // ══════════════════════════════════════════════════════════
 //  工具函数
 // ══════════════════════════════════════════════════════════
