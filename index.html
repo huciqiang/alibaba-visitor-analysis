@@ -304,18 +304,19 @@ const $ = id => document.getElementById(id);
 
 function findField(headers, candidates) {
   const lower = headers.map(h => ({ orig: h, low: h.toLowerCase().replace(/[\s_\-]/g, '') }));
-  // 第一轮：精确匹配（完整字段名一致）
+  // 第一轮：精确匹配
   for (const c of candidates) {
     const cl = c.toLowerCase().replace(/[\s_\-]/g, '');
     const found = lower.find(h => h.low === cl);
     if (found) return found.orig;
   }
-  // 第二轮：子串匹配，但候选词按长度降序，长词优先避免误匹配
-  // 例如 buyerCountry(12) 比 country(7) 先匹配，不会误命中 buyerCountryImg
+  // 第二轮：候选词按长度降序后做子串匹配（长词优先，避免 country 误匹配 buyerCountryImg）
   const sorted = [...candidates].sort((a, b) => b.length - a.length);
   for (const c of sorted) {
     const cl = c.toLowerCase().replace(/[\s_\-]/g, '');
-    const found = lower.find(h => h.low.includes(cl) && h.low.length <= cl.length + 6);
+    // 子串匹配：要求候选词结尾与字段名结尾一致（即字段名以候选词结尾），
+    // 这样 buyerCountry 匹配 country，但 buyerCountryImg 不匹配 country（img结尾）
+    const found = lower.find(h => h.low === cl || h.low.endsWith(cl));
     if (found) return found.orig;
   }
   return null;
