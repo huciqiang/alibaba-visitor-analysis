@@ -110,8 +110,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 60px; }
 .btn-accent  { background: var(--accent); color: #fff; }
 
 /* ── 表格容器 ── */
-.tables { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-@media(max-width:900px){ .tables { grid-template-columns: 1fr; } }
+.tables { display: flex; flex-direction: column; gap: 20px; }
 
 .table-box {
   background: var(--card);
@@ -150,7 +149,7 @@ tbody td { padding: 10px 14px; color: var(--text); }
 
 /* 进度条（表格内） */
 .mini-bar { display: flex; align-items: center; gap: 8px; }
-.mini-track { flex: 1; height: 6px; background: var(--bg); border-radius: 99px; overflow: hidden; min-width: 60px; }
+.mini-track { width: 60px; height: 6px; background: var(--bg); border-radius: 99px; overflow: hidden; flex-shrink: 0; }
 .mini-fill  { height: 100%; border-radius: 99px; }
 .mini-val   { font-size: 12px; font-weight: 700; min-width: 42px; text-align: right; }
 
@@ -270,7 +269,7 @@ th.sortable:not(.asc):not(.desc) .sort-icon::after { content: ' ⇅'; }
       </div>
 
       <!-- 商机词汇总 -->
-      <div class="table-box">
+      <div class="table-box full">
         <div class="table-head">
           <h2>🔑 商机词汇总</h2>
           <span class="count" id="kwCount">0 个关键词</span>
@@ -586,7 +585,7 @@ function renderKwPage() {
     const barW = Math.round(r.visitors / maxV * 100);
     return `<tr>
       <td><span class="${rankClass(gIdx)}">${gIdx + 1}</span></td>
-      <td style="max-width:180px;word-break:break-word">${r.kw}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.kw}">${r.kw}</td>
       <td>
         <div class="mini-bar">
           <div class="mini-track"><div class="mini-fill" style="width:${barW}%;background:#2E86AB"></div></div>
