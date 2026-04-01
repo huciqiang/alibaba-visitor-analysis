@@ -273,6 +273,8 @@ tbody td { padding: 10px 14px; color: var(--text); }
               <th style="width:36px">#</th>
               <th>关键词</th>
               <th>访客量</th>
+              <th>询盘</th>
+              <th>TM</th>
               <th>询盘转化</th>
               <th>潜力</th>
             </tr>
@@ -436,9 +438,10 @@ function analyze(rows) {
     kwRaw.split(/[,|，、；;\n]+/).forEach(k => {
       k = k.trim().toLowerCase();
       if (k.length < 2 || k.length > 80) return;
-      if (!kwMap[k]) kwMap[k] = { visitors: 0, inq: 0 };
+      if (!kwMap[k]) kwMap[k] = { visitors: 0, inq: 0, tm: 0 };
       kwMap[k].visitors++;
       kwMap[k].inq += inq;
+      kwMap[k].tm  += tm;
     });
   }
 
@@ -461,6 +464,7 @@ function analyze(rows) {
       kw,
       visitors: d.visitors,
       inq: d.inq,
+      tm: d.tm,
       inqRate: pct(d.inq, d.visitors),
     }))
     .sort((a, b) => b.visitors - a.visitors);
@@ -549,10 +553,12 @@ function renderKwPage() {
           <span class="mini-val">${r.visitors}</span>
         </div>
       </td>
+      <td>${r.inq}</td>
+      <td>${r.tm}</td>
       <td><span class="${rateClass(r.inqRate)}">${r.inqRate}%</span></td>
       <td>${potentialBadge(r.visitors, r.inqRate)}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="5" class="empty">暂无数据</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
 
   renderPager('kwPager', pages, kwPage, p => { kwPage = p; renderKwPage(); });
 }
@@ -620,11 +626,11 @@ function downloadCSV() {
     ..._result.countries.map((r, i) => [i+1, r.name, r.visitors, r.inq, r.tm, r.convRate+'%', r.inqRate+'%']),
     [],
     ['=== 商机词汇总 ==='],
-    ['排名','关键词','访客量','询盘转化率','潜力判断'],
+    ['排名','关键词','访客量','询盘','TM','询盘转化率','潜力判断'],
     ..._result.keywords.map((r, i) => {
       const pot = r.visitors >= 10 && r.inqRate >= 5 ? '高潜力'
                 : r.visitors >= 5  || r.inqRate >= 2  ? '中潜力' : '低潜力';
-      return [i+1, r.kw, r.visitors, r.inqRate+'%', pot];
+      return [i+1, r.kw, r.visitors, r.inq, r.tm, r.inqRate+'%', pot];
     }),
   ];
 
